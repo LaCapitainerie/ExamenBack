@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import io from "socket.io-client";
-import Canvas, { Player, Socket } from "./_components/canva";
+import Canvas, { food, Player, Socket } from "./_components/canva";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@radix-ui/react-label";
 
@@ -24,20 +24,6 @@ export default function Home() {
     if(name.length > 15) return;
     setName(name);
   }
-
-  useEffect(() => {
-    socket.emit("request_players");
-
-    socket.on("update_leaderboard", (players) => {
-      console.log(players);
-      
-      setLeaderboard(players);
-    });
-
-    return () => {
-      socket.off("update_leaderboard");
-    };
-  }, []);
 
   function connection(name: string) {
 
@@ -69,6 +55,40 @@ export default function Home() {
     setIsConnected(true);
   }
 
+
+
+
+
+  useEffect(() => {
+    socket.emit("request_players");
+    socket.emit("request_food");
+
+    socket.on("update_leaderboard", (players) => {
+      console.log("Players", players);
+      
+      setLeaderboard(players);
+    });
+
+    return () => {
+      socket.off("update_leaderboard");
+    };
+  }, []);
+
+  const [foods, setFoods] = useState<food[]>([]);
+
+  useEffect(() => {
+    socket.on("update_food", (newFood) => {
+      console.log("Foods", newFood);
+      
+      setFoods(newFood);
+    });
+
+    return () => {
+      socket.off("update_food");
+    };
+  }, []);
+  
+
   return (
     <>
       <Dialog open={!isConnected}>
@@ -93,7 +113,7 @@ export default function Home() {
         </DialogContent>
       </Dialog>
 
-      <Canvas players={Object.values(leaderboard)} me={leaderboard[socket.id || ""]}/>
+      <Canvas players={Object.values(leaderboard)} me={leaderboard[socket.id || ""]} foods={foods}/>
     </>
   );
 }

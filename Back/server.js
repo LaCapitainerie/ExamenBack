@@ -18,9 +18,21 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, "public")));
 
 const players = {};
-const dimensions = {width: 800, height: 500};
+const dimensions = {width: 1200, height: 1000};
+const foods = [];
+const foodCount = 100;
 
 function newColor() { return `hsl(${Math.floor(Math.random() * 360)}, 60%, 50%)`; }
+
+function generateFood() {
+  for (let i = 0; i < foodCount; i++) {
+    foods.push({
+      x: Math.random() * dimensions.width,
+      y: Math.random() * dimensions.height,
+      color: newColor(),
+    });
+  }
+}
 
 io.on("connection", (socket) => {
 
@@ -28,11 +40,16 @@ io.on("connection", (socket) => {
     socket.emit("update_leaderboard", players);
   });
 
+  socket.on("request_food", () => {
+    socket.emit("update_food", foods);
+  });
+
   socket.on("set_name", (name) => {
     players[socket.id] = {name: name, score: 30, x: Math.random() * dimensions.width, y: Math.random() * dimensions.height, color: newColor()};
     console.log(`${name} (${socket.id}) s'est connecté`);
 
     io.emit("update_leaderboard", players);
+    io.emit("update_food", foods);
   });
 
   socket.on("disconnect", () => {
@@ -47,7 +64,34 @@ io.on("connection", (socket) => {
 
     io.emit("update_leaderboard", players);
   });
+
+  socket.emit("initialize_food", foods);
+
+  socket.on("eat_food", (foodIndex) => {
+    if (foods[foodIndex]) {
+      foods.splice(foodIndex, 1);
+      if (players[socket.id]) {
+        players[socket.id].score += 5;
+        io.emit("update_leaderboard", players);
+      }
+      setTimeout(() => {
+        if (foods.length < 100) {
+          foods.push({
+            x: Math.random() * dimensions.width,
+            y: Math.random() * dimensions.height,
+            color: newColor(),
+          });
+          io.emit("update_food", foods);
+        }
+      }, 2000);
+    }
+  });
 });
+
+
+
+
+generateFood();
 
 const port = process.env.PORT || 3001;
 

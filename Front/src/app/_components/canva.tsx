@@ -13,8 +13,15 @@ export type Player = {
     color: string;
 }
 
+export type food = {
+    x: number;
+    y: number;
+    color: string;
+}
+
 interface CanvasProps {
     players: Player[];
+    foods: food[];
     me?: Player;
 }
 
@@ -23,13 +30,10 @@ type offset = {
     y: number;
 }
 
-const Canvas: React.FC<CanvasProps> = ({ players, me }) => {
+const Canvas: React.FC<CanvasProps> = ({ players, foods, me }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    console.log(me);
-
-    const offset = { x: Math.floor(window.innerWidth / 2), y: Math.floor(window.innerHeight / 2) };
-    
+    const offset = { x: Math.floor(window.innerWidth / 2), y: Math.floor(window.innerHeight / 2) }
 
     function drawPlayer(player: Player, context: CanvasRenderingContext2D, offset: offset = { x: 0, y: 0 }) {
 
@@ -61,14 +65,29 @@ const Canvas: React.FC<CanvasProps> = ({ players, me }) => {
         if(me)drawPlayer({...me, x:0, y:0,}, context, offset);
     }
 
+    function drawFood(context: CanvasRenderingContext2D, foods: food[], offset: offset = { x: 0, y: 0 }) {
+        foods.forEach(food => {
+            context.beginPath();
+            context.arc(food.x + offset.x, food.y + offset.y, 5, 0, Math.PI * 2, false);
+            context.fillStyle = food.color;
+            context.fill();
+            context.closePath();
+        });
+    }
+
+    function drawGame(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, players: Player[], foods: food[], me?: Player) {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        drawGrid(context, canvas.width, canvas.height, 50);
+        drawPlayers(context, players, me);
+        drawFood(context, foods, { x: offset.x - (me?.x || 0), y: offset.y - (me?.y || 0) });
+    }
+
     useEffect(() => {
         const canvas = canvasRef.current;
         const context = canvas?.getContext('2d');
 
         if (context && canvas) {
-            context.clearRect(0, 0, canvas.width, canvas.height);
-
-            drawPlayers(context, players, me);
+            drawGame(context, canvas, players, foods || [], me);
         }
     }, [players]);
 
@@ -96,10 +115,7 @@ const Canvas: React.FC<CanvasProps> = ({ players, me }) => {
                 canvas.height = window.innerHeight;
                 const context = canvas.getContext('2d');
                 if (context) {
-                    context.clearRect(0, 0, canvas.width, canvas.height);
-                    drawGrid(context, canvas.width, canvas.height, 50);
-
-                    drawPlayers(context, players, me);
+                    drawGame(context, canvas, players, foods || [], me);
                 }
             }
         };

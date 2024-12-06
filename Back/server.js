@@ -18,9 +18,11 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, "public")));
 
 const players = {};
-const dimensions = {width: 1200, height: 1000};
+const dimensions = { width: 1200, height: 1000 };
 const foods = [];
 const foodCount = 100;
+const speed = 10;
+const foodScore = 1;
 
 function newColor() { return `hsl(${Math.floor(Math.random() * 360)}, 60%, 50%)`; }
 
@@ -45,7 +47,15 @@ io.on("connection", (socket) => {
   });
 
   socket.on("set_name", (name) => {
-    players[socket.id] = {name: name, score: 30, x: Math.random() * dimensions.width, y: Math.random() * dimensions.height, color: newColor()};
+    players[socket.id] = {
+      name: name,
+      score: 30,
+      x: Math.random() * dimensions.width,
+      y: Math.random() * dimensions.height,
+      color: newColor(),
+
+      direction: Math.random() * 360,
+    };
     console.log(`${name} (${socket.id}) s'est connecté`);
 
     io.emit("update_leaderboard", players);
@@ -54,7 +64,7 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
 
-    if(!players[socket.id]) {
+    if (!players[socket.id]) {
       return;
     }
 
@@ -69,23 +79,72 @@ io.on("connection", (socket) => {
 
   socket.on("eat_food", (foodIndex) => {
     if (foods[foodIndex]) {
-      foods.splice(foodIndex, 1);
-      if (players[socket.id]) {
-        players[socket.id].score += 5;
-        io.emit("update_leaderboard", players);
-      }
-      setTimeout(() => {
-        if (foods.length < 100) {
-          foods.push({
-            x: Math.random() * dimensions.width,
-            y: Math.random() * dimensions.height,
-            color: newColor(),
-          });
-          io.emit("update_food", foods);
-        }
-      }, 2000);
+
     }
   });
+
+  socket.on("update_direction", (direction) => {
+    if (players[socket.id]) {
+      players[socket.id].direction = direction;
+    }
+  });
+
+  setInterval(() => {
+    for (let id in players) {
+      if (players[id].direction) {
+
+        const moveX = Math.cos(players[id].direction) * (speed / players[id].score);
+        const moveY = Math.sin(players[id].direction) * (speed / players[id].score);
+
+        if (players[id].x + moveX > 0 && players[id].x + moveX < dimensions.width) {
+          players[id].x += moveX;
+        }
+
+        if (players[id].y + moveY > 0 && players[id].y + moveY < dimensions.height) {
+          players[id].y += moveY;
+        }
+
+        for (let foodIndex in foods) {
+          if (
+            Math.abs(players[id].x - foods[foodIndex].x) < players[id].score &&
+            Math.abs(players[id].y - foods[foodIndex].y) < players[id].score
+          ) {
+
+            foods.splice(foodIndex, 1);
+            players[id].score += foodScore;
+            io.emit("update_leaderboard", players);
+
+            let food = {}
+
+            do {
+              var collision = false;
+              food = {
+                x: Math.random() * dimensions.width,
+                y: Math.random() * dimensions.height,
+                color: newColor(),
+              };
+
+              for (let playerId in players) {
+                if (
+                  Math.abs(players[playerId].x - foods[foods.length - 1].x) < players[playerId].score &&
+                  Math.abs(players[playerId].y - foods[foods.length - 1].y) < players[playerId].score
+                ) {
+                  collision = true;
+                  break;
+                }
+              }
+            } while (collision);
+
+            foods.push(food);
+            io.emit("update_food", foods);
+          }
+        }
+      }
+    }
+
+    io.emit("update_players", players);
+  }, 200);
+
 });
 
 

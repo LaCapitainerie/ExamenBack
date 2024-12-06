@@ -87,6 +87,33 @@ export default function Home() {
       socket.off("update_food");
     };
   }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!isConnected) return;
+
+      const { clientX, clientY } = event;
+      const direction = Math.atan2(clientY - window.innerHeight / 2, clientX - window.innerWidth / 2);
+      socket.emit("update_direction", direction);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, [isConnected]);
+
+  useEffect(() => {
+    socket.on("update_players", (players) => {
+      setLeaderboard(players);
+    });
+
+    return () => {
+      socket.off("update_players");
+    };
+  }, []);
+
   
 
   return (

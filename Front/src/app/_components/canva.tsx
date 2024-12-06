@@ -48,7 +48,7 @@ const Canvas: React.FC<CanvasProps> = ({ players, foods, me }) => {
         context.fillStyle = "#000000";
         context.textAlign = "center";
         context.textBaseline = "middle";
-        context.fillText(player.name, player.x + offset.x, player.y + offset.y);
+        context.fillText(`${player.name} - ${player.score}`, player.x + offset.x, player.y + offset.y);
         context.closePath();
 
     }
@@ -78,8 +78,8 @@ const Canvas: React.FC<CanvasProps> = ({ players, foods, me }) => {
     function drawGame(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, players: Player[], foods: food[], me?: Player) {
         context.clearRect(0, 0, canvas.width, canvas.height);
         drawGrid(context, canvas.width, canvas.height, 50);
-        drawPlayers(context, players, me);
         drawFood(context, foods, { x: offset.x - (me?.x || 0), y: offset.y - (me?.y || 0) });
+        drawPlayers(context, players, me);
     }
 
     useEffect(() => {

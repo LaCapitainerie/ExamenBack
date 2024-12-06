@@ -18,23 +18,29 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, "public")));
 
 const players = {};
+const scores = {};
 
 io.on("connection", (socket) => {
-  console.log("Un joueur s'est connecté :", socket.id);
 
+  socket.on("request_players", () => {
+    socket.emit("update_leaderboard", players, scores);
+  });
 
   socket.on("set_name", (name) => {
-    players[socket.id] = {name: name, score: 0};
+    players[socket.id] = name;
+    scores[socket.id] = 0;
     console.log(`${name} (${socket.id}) s'est connecté`);
-    io.emit("update_leaderboard", players);
+
+    io.emit("update_leaderboard", players, scores);
   });
 
   socket.on("disconnect", () => {
     console.log(`Le joueur ${players[socket.id]} (${socket.id}) s'est déconnecté`);
 
     delete players[socket.id];
+    delete scores[socket.id];
 
-    io.emit("update_leaderboard", players);
+    io.emit("update_leaderboard", players, scores);
   });
 });
 

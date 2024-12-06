@@ -1,19 +1,65 @@
 import React, { useRef, useEffect } from 'react';
 
-interface Player {
-    id: string;
+export type Socket<T> = {
+    [key: string]: T;
+}
+
+export type Player = {
+    name: string;
+    score: number;
     x: number;
     y: number;
-    radius: number;
+  
     color: string;
 }
 
 interface CanvasProps {
     players: Player[];
+    me?: Player;
 }
 
-const Canvas: React.FC<CanvasProps> = ({ players }) => {
+type offset = {
+    x: number;
+    y: number;
+}
+
+const Canvas: React.FC<CanvasProps> = ({ players, me }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    console.log(me);
+
+    const offset = { x: Math.floor(window.innerWidth / 2), y: Math.floor(window.innerHeight / 2) };
+    
+
+    function drawPlayer(player: Player, context: CanvasRenderingContext2D, offset: offset = { x: 0, y: 0 }) {
+
+        context.beginPath();
+        context.arc(player.x + offset.x, player.y + offset.y, player.score, 0, Math.PI * 2, false);
+        context.fillStyle = player.color;
+        context.fill();
+        context.closePath();
+
+        context.beginPath();
+        context.font = "20px Arial";
+        context.fillStyle = "#000000";
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillText(player.name, player.x + offset.x, player.y + offset.y);
+        context.closePath();
+
+    }
+
+    function drawPlayers(context: CanvasRenderingContext2D, players: Player[], me?: Player, ) {
+
+        
+
+        players.forEach(player => {
+            if (player.name === me?.name) { return; }
+            drawPlayer(player, context, { x: offset.x - (me?.x || 0), y: offset.y - (me?.y || 0) });
+        });
+
+        if(me)drawPlayer({...me, x:0, y:0,}, context, offset);
+    }
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -22,13 +68,7 @@ const Canvas: React.FC<CanvasProps> = ({ players }) => {
         if (context && canvas) {
             context.clearRect(0, 0, canvas.width, canvas.height);
 
-            players.forEach(player => {
-                context.beginPath();
-                context.arc(player.x, player.y, player.radius, 0, Math.PI * 2, false);
-                context.fillStyle = player.color;
-                context.fill();
-                context.closePath();
-            });
+            drawPlayers(context, players, me);
         }
     }, [players]);
 
@@ -47,25 +87,6 @@ const Canvas: React.FC<CanvasProps> = ({ players }) => {
             context.stroke();
         }
     };
-    
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        const context = canvas?.getContext('2d');
-    
-        if (context && canvas) {
-            context.clearRect(0, 0, canvas.width, canvas.height);
-    
-            drawGrid(context, canvas.width, canvas.height, 50);
-    
-            players.forEach(player => {
-                context.beginPath();
-                context.arc(player.x, player.y, player.radius, 0, Math.PI * 2, false);
-                context.fillStyle = player.color;
-                context.fill();
-                context.closePath();
-            });
-        }
-    }, [players]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -77,13 +98,8 @@ const Canvas: React.FC<CanvasProps> = ({ players }) => {
                 if (context) {
                     context.clearRect(0, 0, canvas.width, canvas.height);
                     drawGrid(context, canvas.width, canvas.height, 50);
-                    players.forEach(player => {
-                        context.beginPath();
-                        context.arc(player.x, player.y, player.radius, 0, Math.PI * 2, false);
-                        context.fillStyle = player.color;
-                        context.fill();
-                        context.closePath();
-                    });
+
+                    drawPlayers(context, players, me);
                 }
             }
         };

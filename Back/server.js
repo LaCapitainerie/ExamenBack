@@ -18,29 +18,34 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, "public")));
 
 const players = {};
-const scores = {};
+const dimensions = {width: 800, height: 500};
+
+function newColor() { return `hsl(${Math.floor(Math.random() * 360)}, 60%, 50%)`; }
 
 io.on("connection", (socket) => {
 
   socket.on("request_players", () => {
-    socket.emit("update_leaderboard", players, scores);
+    socket.emit("update_leaderboard", players);
   });
 
   socket.on("set_name", (name) => {
-    players[socket.id] = name;
-    scores[socket.id] = 0;
+    players[socket.id] = {name: name, score: 30, x: Math.random() * dimensions.width, y: Math.random() * dimensions.height, color: newColor()};
     console.log(`${name} (${socket.id}) s'est connecté`);
 
-    io.emit("update_leaderboard", players, scores);
+    io.emit("update_leaderboard", players);
   });
 
   socket.on("disconnect", () => {
+
+    if(!players[socket.id]) {
+      return;
+    }
+
     console.log(`Le joueur ${players[socket.id]} (${socket.id}) s'est déconnecté`);
 
     delete players[socket.id];
-    delete scores[socket.id];
 
-    io.emit("update_leaderboard", players, scores);
+    io.emit("update_leaderboard", players);
   });
 });
 

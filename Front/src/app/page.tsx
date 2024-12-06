@@ -5,34 +5,60 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import io from "socket.io-client";
-import Canvas from "./_components/canva";
+import Canvas, { Player, Socket } from "./_components/canva";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@radix-ui/react-label";
 
 const socket = io("http://localhost:3001");
+
+
 
 export default function Home() {
   const { toast } = useToast();
 
   const [isConnected, setIsConnected] = useState(false);
   const [name, setName] = useState("");
-  const [leaderboard, setLeaderboard] = useState<{ [key: string]: string }>({});
+  const [leaderboard, setLeaderboard] = useState<Socket<Player>>({});
 
-  // Récupérer la liste des joueurs dès la connexion
+  function changeName(name: string) {
+    if(name.length > 15) return;
+    setName(name);
+  }
+
   useEffect(() => {
-    // Demander la liste des joueurs au serveur
     socket.emit("request_players");
 
-    // Écouter les mises à jour de la liste des joueurs
-    socket.on("update_leaderboard", (players, scores) => {
-      setLeaderboard(players); // Mettre à jour l'état avec les joueurs reçus
+    socket.on("update_leaderboard", (players) => {
+      console.log(players);
+      
+      setLeaderboard(players);
     });
 
-    // Nettoyer les écouteurs lorsque le composant est démonté
     return () => {
       socket.off("update_leaderboard");
     };
   }, []);
 
   function connection(name: string) {
+
+    if (!name) {
+      toast({
+        title: "Invalid name",
+        description: "Please enter a valid name",
+      });
+
+      return;
+    }
+
+    if (leaderboard[name]) {
+      toast({
+        title: "Name already in use",
+        description: "Please enter a different name",
+      });
+
+      return;
+    }
+
     socket.emit("set_name", name);
 
     toast({
@@ -44,24 +70,30 @@ export default function Home() {
   }
 
   return (
-    !isConnected ? (
-      <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-        <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-          <Input placeholder="Enter your name" value={name} onChange={e => setName(e.currentTarget.value)} />
-          <Button onClick={() => connection(name)}>Join</Button>
-
-          <div>
-            <h2>Leaderboard</h2>
-            <ul>
-              {Object.entries(leaderboard).map(([id, playerName]) => (
-                <li key={id}>{playerName}</li>
-              ))}
-            </ul>
+    <>
+      <Dialog open={!isConnected}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Join the Game</DialogTitle>
+            <DialogDescription>
+              Make your profile before joining up.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Nickname
+              </Label>
+              <Input placeholder="Enter your name" value={name} onChange={e => changeName(e.currentTarget.value)} className="col-span-3"/>
+            </div>
           </div>
-        </main>
-      </div >
-    ) : (
-      <Canvas players={[]} />
-    )
+          <DialogFooter>
+            <Button type="submit" onClick={() => connection(name)}>Join</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Canvas players={Object.values(leaderboard)} me={leaderboard[socket.id || ""]}/>
+    </>
   );
 }

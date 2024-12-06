@@ -8,6 +8,7 @@ import io from "socket.io-client";
 import Canvas, { food, Player, Socket } from "./_components/canva";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@radix-ui/react-label";
+import Leaderboard from "./_components/leaderboard";
 
 const socket = io("http://localhost:3001");
 
@@ -19,9 +20,10 @@ export default function Home() {
   const [isConnected, setIsConnected] = useState(false);
   const [name, setName] = useState("");
   const [leaderboard, setLeaderboard] = useState<Socket<Player>>({});
+  const [died, setDied] = useState(false);
 
   function changeName(name: string) {
-    if(name.length > 15) return;
+    if(name.length > 15 || name.length == 0) return;
     setName(name);
   }
 
@@ -54,10 +56,6 @@ export default function Home() {
 
     setIsConnected(true);
   }
-
-
-
-
 
   useEffect(() => {
     socket.emit("request_players");
@@ -114,6 +112,19 @@ export default function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    socket.on("died", () => {
+      setDied(true);
+
+      setTimeout(() => {
+        setIsConnected(false);
+      }, 2000);
+    });
+
+    return () => {
+      socket.off("died");
+    };
+  }, []);
   
 
   return (
@@ -121,9 +132,23 @@ export default function Home() {
       <Dialog open={!isConnected}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Join the Game</DialogTitle>
+            <DialogTitle>
+              {
+                died ? 
+                (
+                  <div className="flex items-center gap-2">
+                    <span className="text-red-500">You died</span>
+                  </div>
+                ) :
+                (
+                  <div className="flex items-center gap-2">
+                    <span>Join the game</span>
+                  </div>
+                )
+              }
+            </DialogTitle>
             <DialogDescription>
-              Make your profile before joining up.
+              Enter your nickname to join the game
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -135,11 +160,17 @@ export default function Home() {
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" onClick={() => connection(name)}>Join</Button>
+            {
+              died ? (
+                <Button type="button" onClick={() => {connection(name);setDied(false)}}>Respawn</Button>
+              ) : 
+                <Button type="submit" onClick={() => {connection(name)}}>Join</Button>
+            }
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      <Leaderboard players={Object.values(leaderboard)} />
       <Canvas players={Object.values(leaderboard)} me={leaderboard[socket.id || ""]} foods={foods}/>
     </>
   );

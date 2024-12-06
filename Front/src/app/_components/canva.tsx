@@ -55,8 +55,6 @@ const Canvas: React.FC<CanvasProps> = ({ players, foods, me }) => {
 
     function drawPlayers(context: CanvasRenderingContext2D, players: Player[], me?: Player, ) {
 
-        
-
         players.forEach(player => {
             if (player.name === me?.name) { return; }
             drawPlayer(player, context, { x: offset.x - (me?.x || 0), y: offset.y - (me?.y || 0) });
@@ -79,7 +77,11 @@ const Canvas: React.FC<CanvasProps> = ({ players, foods, me }) => {
         context.clearRect(0, 0, canvas.width, canvas.height);
         drawGrid(context, canvas.width, canvas.height, 50);
         drawFood(context, foods, { x: offset.x - (me?.x || 0), y: offset.y - (me?.y || 0) });
-        drawPlayers(context, players, me);
+        drawPlayers(
+            context,
+            players.sort((a, b) => b.score - a.score),
+            me
+        );
     }
 
     useEffect(() => {

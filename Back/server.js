@@ -18,9 +18,9 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, "public")));
 
 const players = {};
-const dimensions = { width: 1200, height: 1000 };
+const dimensions = { width: 2000, height: 2000 };
 const foods = [];
-const foodCount = 100;
+const foodCount = 200;
 const speed = 10;
 const foodScore = 1;
 
@@ -77,12 +77,6 @@ io.on("connection", (socket) => {
 
   socket.emit("initialize_food", foods);
 
-  socket.on("eat_food", (foodIndex) => {
-    if (foods[foodIndex]) {
-
-    }
-  });
-
   socket.on("update_direction", (direction) => {
     if (players[socket.id]) {
       players[socket.id].direction = direction;
@@ -137,6 +131,21 @@ io.on("connection", (socket) => {
 
             foods.push(food);
             io.emit("update_food", foods);
+          }
+        }
+
+        for (let playerId in players) {
+          if (playerId !== id) {
+            if (
+              Math.abs(players[id].x - players[playerId].x) < players[id].score &&
+              Math.abs(players[id].y - players[playerId].y) < players[id].score
+            ) {
+              players[id].score += Math.floor(players[playerId].score / 3 * 2);
+              delete players[playerId];
+
+              io.emit("update_leaderboard", players);
+              io.to(playerId).emit("died");
+            }
           }
         }
       }
